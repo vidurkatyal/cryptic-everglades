@@ -2,6 +2,8 @@
 
 ## Quick Start
 
+
+
 To set up a development environment quickly, first install virtualenv. and then create a new environment.
   * $ sudo pip install virtualenv
   * $ virtualenv env
