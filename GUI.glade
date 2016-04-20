@@ -31,6 +31,7 @@
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="import_pdf" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -41,6 +42,7 @@
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="export_pdf" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -194,6 +196,7 @@
                 <property name="label" translatable="yes">Import</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-add</property>
+                <signal name="clicked" handler="import_pdf" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -209,6 +212,7 @@
                 <property name="label" translatable="yes">Save as</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-save-as</property>
+                <signal name="clicked" handler="export_pdf" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
