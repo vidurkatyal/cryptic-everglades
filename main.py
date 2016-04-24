@@ -8,7 +8,9 @@ except ValueError, e:
 import sys
 import mimetypes
 import tempfile
+import copy
 from gi.repository import Gdk
+from PyPDF2 import PdfFileWriter, PdfFileReader
 
 from helpers import *
 
@@ -194,12 +196,12 @@ class PDFShuffler:
                 self.import_directory = self.export_directory = path
                 file_mimetype = mimetypes.guess_type(_file)[0]
                 if file_mimetype != 'application/pdf':
-                    errors += "File %s not supported! Hence not importing...\n" % filename
+                    errors += "File %s not supported! Not importing...\n" % filename
                     continue
 
                 rv = self.add_pdf(_file)
                 if not rv:
-                    errors += "Error import file %s...\n" % filename
+                    errors += "Error importing file %s...\n" % filename
 
             if errors:
                 self.error_message_dialog(errors)
@@ -209,7 +211,11 @@ class PDFShuffler:
     def export_pdf(self, widget=None, data=None):
         """Handler for exporting the pdf."""
 
-        # TODO: Checks to see that the application currently has some pdfs
+        # Checking whether the application currently has some pdfs
+        if not self.pdfqueue:
+            error = "Error! No file imported."
+            self.error_message_dialog(error)
+            return
 
         file_export = Gtk.FileChooserDialog(title="Export PDF...",
                                             parent=self.window,
@@ -236,8 +242,10 @@ class PDFShuffler:
             if ext.lower() != '.pdf':
                 _file += '.pdf'
 
-            print "Exporting file %s" % _file
-            # TODO: Export the file to pdf
+            try:
+                self.export_to_file(_file)
+            except Exception, error: # To catch exceptions like OSError
+                self.error_message_dialog(error)
 
         file_export.destroy()
 
@@ -299,6 +307,29 @@ class PDFShuffler:
         if rv:
             GObject.idle_add(self.render)
         return rv
+
+
+    def export_to_file(self, _file):
+        """Function to export the pdf to file."""
+
+        pdf_output = PdfFileWriter()
+        pdf_input = []
+
+        for pdfdoc in self.pdfqueue:
+            pdfdoc_file = PdfFileReader(open(pdfdoc.copyname, 'rb'))
+            pdf_input.append(pdfdoc_file)
+
+        for row in self.model:
+            filenum, page_num = row[2], row[3]
+            current_page = copy.copy(pdf_input[filenum-1].getPage(page_num-1))
+            # TODO: Code for rotation and cropping
+
+
+
+            pdf_output.addPage(current_page)
+
+
+        pdf_output.write(open(_file, 'wb'))
 
 
 
