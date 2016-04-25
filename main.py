@@ -131,6 +131,7 @@ class PDFShuffler:
 
         # Connecting size change handler to window.
         self.window.connect('size_allocate', self.window_resize)
+        self.window.connect('key_press_event', self.on_keypress)
         self.window.show_all()
         self.progress_bar.hide()
 
@@ -149,6 +150,12 @@ class PDFShuffler:
                            [GObject.TYPE_INT, GObject.TYPE_PYOBJECT])
         self.rendering_thread = 0
 
+
+    def on_keypress(self, widget, event):
+        """Handler to detect keypress."""
+
+        if event.keyval == Gdk.KEY_Delete:
+            self.remove_selected_pages()
 
     def close_window(self, widget, event=None, data=None):
         """Handler for closing the application."""
@@ -212,7 +219,7 @@ class PDFShuffler:
         """Handler for exporting the pdf."""
 
         # Checking whether the application currently has some pdfs
-        if not self.pdfqueue:
+        if not len(self.model):
             error = "Error! No file imported."
             self.error_message_dialog(error)
             return
@@ -248,6 +255,17 @@ class PDFShuffler:
                 self.error_message_dialog(error)
 
         file_export.destroy()
+
+
+    def remove_selected_pages(self, button=None):
+        """Handler to remove selected pages from the application."""
+
+        model = self.iconview.get_model()
+        selection = self.iconview.get_selected_items()
+        selection.sort(reverse=True)
+        for path in selection:
+            iter = model.get_iter(path)
+            model.remove(iter)
 
 
     def add_pdf(self, _file, startpage=None, endpage=None,
