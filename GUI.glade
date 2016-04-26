@@ -139,6 +139,7 @@
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="zoom_in" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -148,6 +149,7 @@
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="zoom_out" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -239,6 +241,7 @@
                 <property name="label" translatable="yes">Zoom in</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-zoom-in</property>
+                <signal name="clicked" handler="zoom_in" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -254,6 +257,7 @@
                 <property name="label" translatable="yes">Zoom out</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-zoom-out</property>
+                <signal name="clicked" handler="zoom_out" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>

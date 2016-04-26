@@ -267,6 +267,14 @@ class PDFShuffler:
             iter = model.get_iter(path)
             model.remove(iter)
 
+    def zoom_in(self, widget=None):
+        """Handler to increase the zoom level by 5 steps"""
+        self.zoom_change(5)
+
+    def zoom_out(self, widget=None, step=5):
+        """Handler to reduce the zoom level by 5 steps"""
+        self.zoom_change(-5)
+
 
     def add_pdf(self, _file, startpage=None, endpage=None,
                             angle=0.0, crop=[0.0, 0.0, 0.0, 0.0]):
@@ -464,6 +472,7 @@ class PDFShuffler:
         self.zoom_scale = 1.1 ** self.zoom_level
         for row in self.model:
             row[4] = self.zoom_scale
+        self.reset_iconview_width()
 
     def zoom_change(self, step=5):
         """Function to modify the zoom level."""
