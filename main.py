@@ -114,12 +114,23 @@ class PDFShuffler:
                                              Gdk.DragAction.DEFAULT)
 
         # TODO: Connect drag and drop events to handlers
-
+        self.iconview.connect('button_press_event', self.iconview_button_press_event)
 
 
 
 
         align.add(self.iconview)
+
+
+        # Popup menu for iconview
+        self.popup = Gtk.Menu()
+        labels = ('Rotate Right', 'Rotate Left', 'Delete')
+        handlers = (self.rotate_page_right, self.rotate_page_left, self.remove_selected_pages)
+        for label, handler in zip(labels, handlers):
+           popup_item = Gtk.MenuItem.new_with_mnemonic(label)
+           popup_item.connect('activate', handler)
+           popup_item.show()
+           self.popup.append(popup_item)
 
         # Change iconview color background
         style_context_sw = self.sw.get_style_context()
@@ -438,6 +449,25 @@ class PDFShuffler:
 
             if errors:
                 self.error_message_dialog(errors)
+
+
+    def iconview_button_press_event(self, iconview, event):
+        """Handler for managing mouse clicks on the iconview"""
+
+        button = event.button
+        if button == 3:
+            x = int(event.x)
+            y = int(event.y)
+            time = event.time
+            path = iconview.get_path_at_pos(x, y)
+            selection = iconview.get_selected_items()
+            if path:
+                if path not in selection:
+                    iconview.unselect_all()
+                iconview.select_path(path)
+                iconview.grab_focus()
+                self.popup.popup(None, None, None, None, button, time)
+            return 1
 
 
     def set_cell_data(self, column, cell, model, iter, data=None):
