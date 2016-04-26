@@ -83,6 +83,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_stock">False</property>
+                        <signal name="activate" handler="rotate_page_left" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -91,20 +92,13 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_stock">False</property>
+                        <signal name="activate" handler="rotate_page_right" swapped="no"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkSeparatorMenuItem" id="separatormenuitem_edit">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkImageMenuItem" id="imagemenuitem_crop">
-                        <property name="label">Crop</property>
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="use_stock">False</property>
                       </object>
                     </child>
                     <child>
@@ -284,6 +278,7 @@
                 <property name="label" translatable="yes">Rotate left</property>
                 <property name="use_underline">True</property>
                 <property name="icon_name">object-rotate-left</property>
+                <signal name="clicked" handler="rotate_page_left" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -300,6 +295,7 @@
                 <property name="label" translatable="yes">Rotate right</property>
                 <property name="use_underline">True</property>
                 <property name="icon_name">object-rotate-right</property>
+                <signal name="clicked" handler="rotate_page_right" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>

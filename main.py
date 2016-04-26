@@ -269,12 +269,37 @@ class PDFShuffler:
 
     def zoom_in(self, widget=None):
         """Handler to increase the zoom level by 5 steps"""
+
         self.zoom_change(5)
 
     def zoom_out(self, widget=None, step=5):
-        """Handler to reduce the zoom level by 5 steps"""
+        """Handler to reduce the zoom level by 5 steps."""
+
         self.zoom_change(-5)
 
+    def rotate_page_right(self, widget, data=None):
+        """Handler to rotate selected pages right."""
+
+        self.rotate_page(90)
+
+    def rotate_page_left(self, widget, data=None):
+        """Handler to rotate selected pages left."""
+
+        self.rotate_page(-90)
+
+
+    def rotate_page(self, angle):
+        """Function to rotate selected pages."""
+
+        model = self.iconview.get_model()
+        selection = self.iconview.get_selected_items()
+
+        for path in selection:
+            iter = model.get_iter(path)
+            new_angle = ( model.get_value(iter, 6) + int(angle) ) % 360
+            model.set_value(iter, 6, new_angle)
+            self.update_geometry(iter)
+        self.reset_iconview_width()
 
     def add_pdf(self, _file, startpage=None, endpage=None,
                             angle=0.0, crop=[0.0, 0.0, 0.0, 0.0]):
@@ -348,15 +373,29 @@ class PDFShuffler:
         for row in self.model:
             filenum, page_num = row[2], row[3]
             current_page = copy.copy(pdf_input[filenum-1].getPage(page_num-1))
-            # TODO: Code for rotation and cropping
-
-
-
+            angle = row[6]
+            current_page.rotateClockwise(angle)
             pdf_output.addPage(current_page)
-
 
         pdf_output.write(open(_file, 'wb'))
 
+        (path, filename) = os.path.split(_file)
+        info = "PDF " + filename + " exported successfully."
+        self.info_message_dialog(info)
+
+
+
+    def info_message_dialog(self, msg):
+        """Function to display info messages."""
+
+        dialog = Gtk.MessageDialog(flags=Gtk.DialogFlags.MODAL,
+                                          type=Gtk.MessageType.INFO,
+                                          parent=self.window,
+                                          message_format=str(msg),
+                                          buttons=Gtk.ButtonsType.OK)
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            dialog.destroy()
 
 
     def error_message_dialog(self, msg):
