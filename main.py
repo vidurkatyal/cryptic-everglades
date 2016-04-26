@@ -9,6 +9,7 @@ import sys
 import mimetypes
 import tempfile
 import copy
+import urllib
 from gi.repository import Gdk
 from PyPDF2 import PdfFileWriter, PdfFileReader
 
@@ -61,6 +62,8 @@ class PDFShuffler:
                               self.TARGETS_SW,
                               Gdk.DragAction.COPY |
                               Gdk.DragAction.MOVE)
+
+        self.sw.connect('drag_data_received', self.sw_dnd_received_data)
 
         align = Gtk.Alignment.new(0.5, 0.5, 0, 0)
         self.sw.add_with_viewport(align)
@@ -411,6 +414,32 @@ class PDFShuffler:
             dialog.destroy()
 
 
+    def sw_dnd_received_data(self, scrolledwindow, context, x, y,
+                             selection_data, target_id, etime):
+        """Handles received data by drag and drop in scrolledwindow"""
+
+        data = selection_data.get_data()
+        if target_id == self.TEXT_URI_LIST:
+            uri = data.strip()
+            uris = uri.split() # For multiple files dropped
+            errors = ""
+            for uri in uris:
+                _file = self.get_file_path_from_dnd_dropped_uri(uri)
+                (path, filename) = os.path.split(_file)
+                self.import_directory = self.export_directory = path
+                file_mimetype = mimetypes.guess_type(_file)[0]
+                if file_mimetype != 'application/pdf':
+                    errors += "File %s not supported! Not importing...\n" % filename
+                    continue
+
+                rv = self.add_pdf(_file)
+                if not rv:
+                    errors += "Error importing file %s...\n" % filename
+
+            if errors:
+                self.error_message_dialog(errors)
+
+
     def set_cell_data(self, column, cell, model, iter, data=None):
         """Function to set cell data."""
 
@@ -517,6 +546,21 @@ class PDFShuffler:
         """Function to modify the zoom level."""
 
         self.zoom_set(self.zoom_level + step)
+
+    def get_file_path_from_dnd_dropped_uri(self, uri):
+        """Extracts the path from an uri"""
+
+        path = urllib.url2pathname(uri) # escape special chars
+        path = path.strip('\r\n\x00')   # remove \r\n and NULL
+
+        if path.startswith('file:\\\\\\'): # windows
+            path = path[8:]
+        elif path.startswith('file://'):   # nautilus, rox
+            path = path[7:]
+        elif path.startswith('file:'):     # xffm
+            path = path[5:]  # 5 is len('file:')
+
+        return path
 
 
 def main():
