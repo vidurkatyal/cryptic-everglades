@@ -113,8 +113,13 @@ class PDFShuffler:
         self.iconview.enable_model_drag_dest(self.TARGETS_ICONVIEW,
                                              Gdk.DragAction.DEFAULT)
 
-        # TODO: Connect drag and drop events to handlers
         self.iconview.connect('button_press_event', self.iconview_button_press_event)
+        self.iconview.connect('drag_data_get', self.iconview_dnd_get_data)
+        self.iconview.connect('drag_data_received', self.iconview_dnd_received_data)
+        self.iconview.connect('drag_data_delete', self.iconview_dnd_data_delete)
+        self.iconview.connect('drag_motion', self.iconview_dnd_motion)
+        self.iconview.connect('drag_leave', self.iconview_dnd_leave_end)
+        self.iconview.connect('drag_end', self.iconview_dnd_leave_end)
 
 
 
@@ -427,7 +432,7 @@ class PDFShuffler:
 
     def sw_dnd_received_data(self, scrolledwindow, context, x, y,
                              selection_data, target_id, etime):
-        """Handles received data by drag and drop in scrolledwindow"""
+        """Handler to import files by by drag and drop in scrolledwindow."""
 
         data = selection_data.get_data()
         if target_id == self.TEXT_URI_LIST:
@@ -468,6 +473,126 @@ class PDFShuffler:
                 iconview.grab_focus()
                 self.popup.popup(None, None, None, None, button, time)
             return 1
+
+
+    def iconview_dnd_get_data(self, iconview, context,
+                        selection_data, target_id, etime):
+        """Handler to get the pages selected by drag and drop in iconview."""
+
+        model = iconview.get_model()
+        selection = self.iconview.get_selected_items()
+        selection.sort(key=lambda x: x.get_indices()[0])
+        data = []
+        for path in selection:
+            target = str(selection_data.get_target())
+            if target == 'MODEL_ROW_INTERN':
+                data.append(str(path[0]))
+
+        if data:
+            data = '\n;\n'.join(data)
+            selection_data.set(selection_data.get_target(), 8, data.encode())
+
+
+    def iconview_dnd_received_data(self, iconview, context, x, y,
+                             selection_data, target_id, etime):
+        """Handler to receive pages sent by drag and drop in iconview."""
+
+        model = iconview.get_model()
+        data = selection_data.get_data()
+        if data:
+            data = data.decode().split('\n;\n')
+            item = iconview.get_dest_item_at_pos(x, y)
+            if item:
+                path, position = item
+                ref_to = Gtk.TreeRowReference.new(model,path)
+            else:
+                ref_to = None
+                position = Gtk.IconViewDropPosition.DROP_RIGHT
+                if len(model) > 0:  #find the iterator of the last row
+                    row = model[-1]
+                    ref_to = Gtk.TreeRowReference.new(model, row.path)
+            if ref_to:
+                before = (position == Gtk.IconViewDropPosition.DROP_LEFT
+                          or position == Gtk.IconViewDropPosition.DROP_ABOVE)
+                target = str(selection_data.get_target())
+
+                if target == 'MODEL_ROW_INTERN':
+                    if before:
+                        data.sort(key=int)
+                    else:
+                        data.sort(key=int,reverse=True)
+                    ref_from_list = [Gtk.TreeRowReference.new(model, Gtk.TreePath(p))
+                                     for p in data]
+                    for ref_from in ref_from_list:
+                        path = ref_to.get_path()
+                        iter_to = model.get_iter(path)
+                        path = ref_from.get_path()
+                        iter_from = model.get_iter(path)
+                        row = model[iter_from]
+                        if before:
+                            model.insert_before(iter_to, row[:])
+                        else:
+                            model.insert_after(iter_to, row[:])
+                    if context.get_actions() & Gdk.DragAction.MOVE:
+                        for ref_from in ref_from_list:
+                            path = ref_from.get_path()
+                            iter_from = model.get_iter(path)
+                            model.remove(iter_from)
+
+
+    def iconview_dnd_data_delete(self, widget, context):
+        """Handler that deletes the drag and drop items after a successful move operation."""
+
+        model = self.iconview.get_model()
+        selection = self.iconview.get_selected_items()
+        ref_del_list = [Gtk.TreeRowReference.new(model,path) for path in selection]
+        for ref_del in ref_del_list:
+            path = ref_del.get_path()
+            iter = model.get_iter(path)
+            model.remove(iter)
+
+
+    def iconview_dnd_motion(self, iconview, context, x, y, etime):
+        """Handler that initiates auto-scroll during drag and drop."""
+
+        autoscroll_area = 40
+        sw_vadj = self.sw.get_vadjustment()
+        sw_height = self.sw.get_allocation().height
+        if y -sw_vadj.get_value() < autoscroll_area:
+            if not self.iconview_auto_scroll_timer:
+                self.iconview_auto_scroll_direction = Gtk.DirectionType.UP
+                self.iconview_auto_scroll_timer = GObject.timeout_add(150,
+                                                                self.iconview_auto_scroll)
+        elif y -sw_vadj.get_value() > sw_height - autoscroll_area:
+            if not self.iconview_auto_scroll_timer:
+                self.iconview_auto_scroll_direction = Gtk.DirectionType.DOWN
+                self.iconview_auto_scroll_timer = GObject.timeout_add(150,
+                                                                self.iconview_auto_scroll)
+        elif self.iconview_auto_scroll_timer:
+            GObject.source_remove(self.iconview_auto_scroll_timer)
+            self.iconview_auto_scroll_timer = None
+
+
+    def iconview_dnd_leave_end(self, widget, context, ignored=None):
+        """Handler that ends the auto-scroll during drag and drop."""
+
+        if self.iconview_auto_scroll_timer:
+            GObject.source_remove(self.iconview_auto_scroll_timer)
+            self.iconview_auto_scroll_timer = None
+
+
+    def iconview_auto_scroll(self):
+        """Function for timeout for auto-scroll."""
+
+        sw_vadj = self.sw.get_vadjustment()
+        sw_vpos = sw_vadj.get_value()
+        if self.iconview_auto_scroll_direction == Gtk.DirectionType.UP:
+            sw_vpos -= sw_vadj.get_step_increment()
+            sw_vadj.set_value(max(sw_vpos, sw_vadj.get_lower()))
+        elif self.iconview_auto_scroll_direction == Gtk.DirectionType.DOWN:
+            sw_vpos += sw_vadj.get_step_increment()
+            sw_vadj.set_value(min(sw_vpos, sw_vadj.get_upper() - sw_vadj.get_page_size()))
+        return True
 
 
     def set_cell_data(self, column, cell, model, iter, data=None):
