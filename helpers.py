@@ -77,14 +77,6 @@ class CellRendererImage(Gtk.CellRenderer):
                          0, 360, 0, GObject.PARAM_READWRITE),
             "scale": (GObject.TYPE_FLOAT, "Scale", "Scale",
                       0.01, 100., 1., GObject.PARAM_READWRITE),
-            "cropL": (GObject.TYPE_FLOAT, "CropL", "CropL",
-                      0., 1., 0., GObject.PARAM_READWRITE),
-            "cropR": (GObject.TYPE_FLOAT, "CropR", "CropR",
-                      0., 1., 0., GObject.PARAM_READWRITE),
-            "cropT": (GObject.TYPE_FLOAT, "CropT", "CropT",
-                      0., 1., 0., GObject.PARAM_READWRITE),
-            "cropB": (GObject.TYPE_FLOAT, "CropB", "CropB",
-                      0., 1., 0., GObject.PARAM_READWRITE),
     }
 
     def __init__(self):
@@ -107,12 +99,9 @@ class CellRendererImage(Gtk.CellRenderer):
             else:
                 w1, h1 = w0, h0
 
-        x = self.cropL * w1
-        y = self.cropT * h1
-
         scale = 2.0 * self.scale
-        w2 = int(scale * (1. - self.cropL - self.cropR) * w1)
-        h2 = int(scale * (1. - self.cropT - self.cropB) * h1)
+        w2 = int(scale * w1)
+        h2 = int(scale * h1)
         
         return w0,h0,w1,h1,w2,h2,rotation
 
@@ -122,8 +111,7 @@ class CellRendererImage(Gtk.CellRenderer):
     def do_get_property(self, pspec):
         return getattr(self, pspec.name)
 
-    def do_render(self, window, widget, background_area, cell_area, \
-                 expose_area):
+    def do_render(self, window, widget, background_area, cell_area, expose_area):
         if not self.image:
             return
 
@@ -142,8 +130,8 @@ class CellRendererImage(Gtk.CellRenderer):
 
         window.translate(x,y)
 
-        x = self.cropL * w1
-        y = self.cropT * h1
+        x = 0
+        y = 0
 
         #shadow
         window.set_source_rgb(0.5, 0.5, 0.5)

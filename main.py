@@ -82,12 +82,8 @@ class PDFShuffler:
                                    float,       # 4. Scale
                                    str,         # 5. Document filename
                                    int,         # 6. Rotation angle
-                                   float,       # 7. Crop left
-                                   float,       # 8. Crop right
-                                   float,       # 9. Crop top
-                                   float,       # 10. Crop bottom
-                                   float,       # 11. Page width
-                                   float)       # 12. Page height
+                                   float,       # 7. Page width
+                                   float)       # 8. Page height
 
         self.zoom_set(-14)
 
@@ -320,8 +316,7 @@ class PDFShuffler:
             self.update_geometry(iter)
         self.reset_iconview_width()
 
-    def add_pdf(self, _file, startpage=None, endpage=None,
-                            angle=0.0, crop=[0.0, 0.0, 0.0, 0.0]):
+    def add_pdf(self, _file, startpage=None, endpage=None, angle=0.0):
         """Function to add pdf to the application."""
 
         pdfdoc = None
@@ -363,10 +358,6 @@ class PDFShuffler:
                                       self.zoom_scale,
                                       pdfdoc._file,
                                       angle,
-                                      crop[0],
-                                      crop[1],
-                                      crop[2],
-                                      crop[3],
                                       width,
                                       height
                                     ))
@@ -435,9 +426,21 @@ class PDFShuffler:
         """Handler to import files by by drag and drop in scrolledwindow."""
 
         data = selection_data.get_data()
-        if target_id == self.TEXT_URI_LIST:
-            uri = data.strip()
-            uris = uri.split() # For multiple files dropped
+        target = str(selection_data.get_target())
+        if target == 'MODEL_ROW_EXTERN':
+            if data:
+                data = data.split('\n;\n')
+            while data:
+                tmp = data.pop(0).split('\n')
+                filename = tmp[0]
+                page_num, angle = [int(k) for k in tmp[1:3]]
+                if self.add_pdf(filename, page_num, page_num, angle):
+                    if context.get_actions() & Gdk.DragAction.MOVE:
+                        context.finish(True, True, etime)
+
+        elif target == 'text/uri-list':
+            uris = data.strip()
+            uris = uris.split() # For multiple files dropped
             errors = ""
             for uri in uris:
                 _file = self.get_file_path_from_dnd_dropped_uri(uri)
@@ -483,10 +486,17 @@ class PDFShuffler:
         selection = self.iconview.get_selected_items()
         selection.sort(key=lambda x: x.get_indices()[0])
         data = []
+        target = str(selection_data.get_target())
         for path in selection:
-            target = str(selection_data.get_target())
             if target == 'MODEL_ROW_INTERN':
                 data.append(str(path[0]))
+            elif target == 'MODEL_ROW_EXTERN':
+                iter = model.get_iter(path)
+                filenum, page_num, angle = model.get(iter, 2, 3, 6)
+                pdfdoc = self.pdfqueue[filenum - 1]
+                data.append('\n'.join([pdfdoc._file,
+                                       str(page_num),
+                                       str(angle)]))
 
         if data:
             data = '\n;\n'.join(data)
@@ -538,6 +548,27 @@ class PDFShuffler:
                             path = ref_from.get_path()
                             iter_from = model.get_iter(path)
                             model.remove(iter_from)
+
+                elif target == 'MODEL_ROW_EXTERN':
+                    if not before:
+                        data.reverse()
+                    while data:
+                        tmp = data.pop(0).split('\n')
+                        filename = tmp[0]
+                        page_num, angle = [int(k) for k in tmp[1:3]]
+                        if self.add_pdf(filename, page_num, page_num, angle):
+                            if len(model) > 0:
+                                path = ref_to.get_path()
+                                iter_to = model.get_iter(path)
+                                row = model[-1] #the last row
+                                path = row.path
+                                iter_from = model.get_iter(path)
+                                if before:
+                                    model.move_before(iter_from, iter_to)
+                                else:
+                                    model.move_after(iter_from, iter_to)
+                                if context.get_actions() & Gdk.DragAction.MOVE:
+                                    context.finish(True, True, etime)
 
 
     def iconview_dnd_data_delete(self, widget, context):
@@ -601,12 +632,8 @@ class PDFShuffler:
         cell.set_property('image', model.get_value(iter,1))
         cell.set_property('scale', model.get_value(iter,4))
         cell.set_property('rotation', model.get_value(iter,6))
-        cell.set_property('cropL', model.get_value(iter,7))
-        cell.set_property('cropR', model.get_value(iter,8))
-        cell.set_property('cropT', model.get_value(iter,9))
-        cell.set_property('cropB', model.get_value(iter,10))
-        cell.set_property('width', model.get_value(iter,11))
-        cell.set_property('height', model.get_value(iter,12))
+        cell.set_property('width', model.get_value(iter,7))
+        cell.set_property('height', model.get_value(iter,8))
 
 
 
@@ -616,7 +643,7 @@ class PDFShuffler:
         if not self.model.get_iter_first(): # Check if the model is empty
             return
 
-        max_w = 10 + int( max(row[4]*row[11]*(1.0-row[7]-row[8]) for row in self.model) )
+        max_w = 10 + int( max(row[4]*row[7] for row in self.model) )
         if max_w != self.iconview_col_width:
             self.iconview_col_width = max_w
             self.iconview.set_item_width(-1)
@@ -645,7 +672,6 @@ class PDFShuffler:
             return
 
         filenum, page_num, rotation = self.model.get(iter, 2, 3, 6)
-        crop = self.model.get(iter, 7, 8, 9, 10)
         page = self.pdfqueue[filenum-1].document.get_page(page_num-1)
         w0, h0 = page.get_size()
 
@@ -656,7 +682,7 @@ class PDFShuffler:
         else:
             w1, h1 = w0, h0
 
-        self.model.set(iter, 11, w1, 12, h1)
+        self.model.set(iter, 7, w1, 8, h1)
 
 
     def progress_bar_timeout(self):
