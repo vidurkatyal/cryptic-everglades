@@ -323,9 +323,9 @@ class PDFShuffler:
         rv = False
 
         for pdf in self.pdfqueue:
-            if os.path.isfile(pdf.filename):
-                if os.path.samefile(_file, pdf.filename):
-                    if os.path.getmtime(_file) is pdf.mtime:
+            if os.path.isfile(pdf._file):
+                if os.path.samefile(_file, pdf._file):
+                    if os.path.getmtime(_file) == pdf.mtime:
                         pdfdoc = pdf
                         break
 
