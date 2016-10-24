@@ -92,7 +92,8 @@ class PDFShuffler:
         self.iconview = Gtk.IconView(self.model)
         self.iconview.clear()
         self.iconview.set_item_width(-1)
-
+        
+        #setting for iconview
         self.cellthumb = CellRendererImage()
         self.iconview.pack_start(self.cellthumb, False)
         self.iconview.set_cell_data_func(self.cellthumb, self.set_cell_data, None)
