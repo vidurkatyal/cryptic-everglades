@@ -13,7 +13,7 @@ from gi.repository import GObject
 
 
 class PDF_Doc:
-    """Class for handling PDF documents."""
+    #Class for handling PDF documents
 
     def __init__(self, _file, numfiles, tmp_dir):
 
